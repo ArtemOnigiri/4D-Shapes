@@ -110,7 +110,7 @@ function makeShader3d(plane) {
 				float diff = max(0.0, dot(light, n)) * 0.5 + 0.5;
 				float spec = max(0.0, dot(light, reflect(rd, n)));
 				vec3 col = vec3(0.25, 0.5, 1.0) * diff + pow(spec, 32.0) * 0.5;
-				return col;
+				return clamp(col, vec3(0.0), vec3(1.0));
 			}
 			if(d > 10.0) return vec3(0.75);
 			p += d * rd;
