@@ -38,20 +38,42 @@ function makeShader(plane, orthogonal, mode) {
 	vec3 rd = vec3(1.3);
 	rd.` + plane + ` = uv;`;
 	const view3d = orthogonal ? orthogonalView3d : topView3d;
+	const view4d = topView3d;
 	const mode2d = 'vec3 col = draw2D(uv);'
 	const mode3d = `vec4 col3d = draw3D(uv);
 	vec3 col = mix(vec3(0.75), col3d.rgb, col3d.a);`;
 	const mode2and3d = `vec3 col2d = draw2D(uv);
 	vec4 col3d = draw3D(uv);
 	vec3 col = mix(col2d, col3d.rgb, col3d.a * 0.5);`;
+	const mode4d = `vec3 col = draw4D(uv);`;
 	let modeCode;
 	let col3d = '0.25, 0.5, 1.0';
-	if(mode == 1) modeCode = mode3d;
-	else if(mode == 2) {
+	if(mode == 1) modeCode = mode2d;
+	else if(mode == 2) modeCode = mode3d;
+	else if(mode == 3) {
 		modeCode = mode2and3d;
 		col3d = '0.4, 0.5, 0.6';
 	}
+	else if(mode == 4) modeCode = mode4d;
 	else modeCode = mode2d;
+	let distFunc = `p.` + plane + ` *= rot(u_time);
+	float d = torus3(p, vec2(0.4, 0.15));`;
+	if(mode == 4) {
+		distFunc = `vec4 p4 = vec4(p, 0.0);
+		p4.` + plane + ` *= rot(u_time);
+		float d = torus4(p4, vec3(0.4, 0.15, 0.05));`;
+	}
+	let draw2D = '';
+	if(mode == 0 || mode == 1 || mode == 3) {
+		draw2D = `vec3 draw2D(vec2 uv) {
+		` + view2d + `
+		p.` + plane + ` *= rot(u_time);
+		float dist = torus3(p, vec2(0.4, 0.15));
+		float k = smoothstep(0.0, 0.005, dist);
+		vec3 col = mix(vec3(0.25, 0.5, 1.0), vec3(0.75), k);
+		return col;
+		}`;
+	}
 	return `
 	precision highp float;
 	uniform float u_time;
@@ -70,9 +92,15 @@ function makeShader(plane, orthogonal, mode) {
 		return d3;
 	}
 
+	float torus4(vec4 p, vec3 r) {
+		float d2 = length(p.xy) - r.x;
+		float d3 = length(vec2(d2, p.z)) - r.y;
+		float d4 = length(vec2(d3, p.w)) - r.z;
+		return d4;
+	}
+
 	float getDist(vec3 p) {
-		p.` + plane + ` *= rot(u_time);
-		float d = torus3(p, vec2(0.4, 0.15));
+		` + distFunc + `
 		return d;
 	}
 
@@ -102,19 +130,19 @@ function makeShader(plane, orthogonal, mode) {
 		return vec4(0.0);
 	}
 
-	vec3 draw2D(vec2 uv) {
-		` + view2d + `
-		p.` + plane + ` *= rot(u_time);
-		float dist = torus3(p, vec2(0.4, 0.15));
-		float k = smoothstep(0.0, 0.005, dist);
-		vec3 col = mix(vec3(0.25, 0.5, 1.0), vec3(0.75), k);
-		return col;
-	}
+	` + draw2D + `
 
 	vec4 draw3D(vec2 uv) {
 		` + view3d + `
 		rd = normalize(rd);
 		return march(ro, rd);
+	}
+
+	vec3 draw4D(vec2 uv) {
+		` + view4d + `
+		rd = normalize(rd);
+		vec4 col = march(ro, rd);
+		return mix(vec3(0.75), col.rgb, col.a);
 	}
 
 	void main() {

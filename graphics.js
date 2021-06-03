@@ -1,31 +1,59 @@
 makeView(false, 0);
 makeView(false, 1);
 makeView(false, 2);
+makeView(false, 3);
+makeView(false, 4);
 
 function makeView(orthogonal, mode) {
-	const width = Math.min(window.innerWidth, window.innerHeight);
-	const height = width / 3;
-	const div = document.createElement('div');
+	let width;
+	let height;
+	let planes;
+	let fontSize;
+	if(mode == 0) {
+		width = height = Math.min(window.innerWidth, window.innerHeight) / 3;
+		planes = ['xy'];
+		fontSize = ~~(width / 13);
+	}
+	else if(mode < 4) {
+		width = Math.min(window.innerWidth, window.innerHeight);
+		height = width / 3;
+		planes = ['xy', 'xz', 'yz'];
+		fontSize = ~~(width / 40);
+	}
+	else {
+		width = Math.min(window.innerWidth, window.innerHeight);
+		height = width / 3 * 2;
+		planes = ['xy', 'xz', 'yz', 'wz', 'wx', 'wy'];
+		fontSize = ~~(width / 40);
+	}
+	const container = document.createElement('div');
+	const graphicsContainer = document.createElement('div');
 	const cnv = document.createElement('canvas');
 	const cnv2d = document.createElement('canvas');
-	div.classList.add('graphics-view-container');
-	div.style.width = width + 'px';
-	div.style.height = height + 'px';
+	container.classList.add('view-container');
+	graphicsContainer.classList.add('graphics-view-container');
+	graphicsContainer.style.width = width + 'px';
+	graphicsContainer.style.height = height + 'px';
 	cnv.classList.add('graphics-view');
 	cnv2d.classList.add('graphics-view');
-	document.body.appendChild(div);
-	div.appendChild(cnv);
+	document.body.appendChild(container);
+	container.appendChild(graphicsContainer);
+	graphicsContainer.appendChild(cnv);
 	cnv.width = width;
 	cnv.height = height;
-	div.appendChild(cnv2d);
+	graphicsContainer.appendChild(cnv2d);
 	cnv2d.width = width;
 	cnv2d.height = height;
 	const gl = cnv.getContext('webgl');
 	const ctx = cnv2d.getContext('2d');
-	const planes = ['xy', 'xz', 'yz'];
-	ctx.font = 'bold ' + (~~(width / 40)) + 'px sans-serif';
-	for(let i = 0; i < 3; i++) {
-		let charX = width / 3 / 20 + width / 3 * i;
+	ctx.font = 'bold ' + fontSize + 'px sans-serif';
+	for(let i = 0; i < planes.length; i++) {
+		let charX = width / 3 / 20 + width / 3 *(i % 3);
+		let charY = height / 10;
+		if(mode == 4) {
+			charY = height / 20;
+			if(i > 2) charY += height / 2;
+		}
 		for(let j = 0; j < planes[i].length; j++) {
 			let ch = planes[i].charAt(j);
 			if(ch == 'x') ctx.fillStyle = '#e00';
@@ -33,7 +61,7 @@ function makeView(orthogonal, mode) {
 			else if(ch == 'z') ctx.fillStyle = '#00f';
 			else if(ch == 'w') ctx.fillStyle = '#ff0';
 			else ctx.fillStyle = '#000';
-			ctx.fillText(ch, charX, height / 10);
+			ctx.fillText(ch, charX, charY);
 			charX += ctx.measureText(ch).width;
 		}
 	}
@@ -43,10 +71,20 @@ function makeView(orthogonal, mode) {
 	let currentTime = Date.now();
 	gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 	buffers = makeBuffers(gl);
-	programs.push(makeProgram(planes[0], 1, orthogonal, mode, gl));
-	programs.push(makeProgram(planes[1], 2, orthogonal, mode, gl));
-	programs.push(makeProgram(planes[2], 3, orthogonal, mode, gl));
-	let view = {programs, buffers, time, currentTime, gl, active: true};
+	if(mode == 0) {
+		programs.push(makeProgram(planes[0], 0, orthogonal, mode, gl));
+	}
+	else if(mode < 4) {
+		for(let i = 0; i < 3; i++) {
+			programs.push(makeProgram(planes[i], i + 1, orthogonal, mode, gl));
+		}
+	}
+	else {
+		for(let i = 0; i < 6; i++) {
+			programs.push(makeProgram(planes[i], i + 4, orthogonal, mode, gl));
+		}
+	}
+	let view = {programs, buffers, time, currentTime, gl, container, active: true};
 	window.requestAnimationFrame(() => update(view));
 	return view;
 }
@@ -91,7 +129,8 @@ function makeProgram(plane, offset, orthogonal, mode, gl) {
 	gl.shaderSource(vertexShader, vertexShaderCode);
 	gl.compileShader(vertexShader);
 	const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-	gl.shaderSource(fragmentShader, makeShader(plane, orthogonal, mode));
+	const fragmentShaderCode = makeShader(plane, orthogonal, mode);
+	gl.shaderSource(fragmentShader, fragmentShaderCode);
 	gl.compileShader(fragmentShader);
 	let log = gl.getShaderInfoLog(fragmentShader);
 	if(log) console.log(log);
@@ -134,6 +173,6 @@ function update(view) {
 		}
 		view.gl.deleteBuffer(view.buffers.position);
 		view.gl.deleteBuffer(view.buffers.texcoord);
-		view.gl.canvas.remove();
+		view.container.remove();
 	}
 }
