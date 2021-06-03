@@ -3,21 +3,49 @@ makeView(false, 1);
 makeView(false, 2);
 
 function makeView(orthogonal, mode) {
+	const width = Math.min(window.innerWidth, window.innerHeight);
+	const height = width / 3;
+	const div = document.createElement('div');
 	const cnv = document.createElement('canvas');
+	const cnv2d = document.createElement('canvas');
+	div.classList.add('graphics-view-container');
+	div.style.width = width + 'px';
+	div.style.height = height + 'px';
 	cnv.classList.add('graphics-view');
-	document.body.appendChild(cnv);
-	cnv.width = Math.min(window.innerWidth, window.innerHeight);
-	cnv.height = cnv.width / 3;
+	cnv2d.classList.add('graphics-view');
+	document.body.appendChild(div);
+	div.appendChild(cnv);
+	cnv.width = width;
+	cnv.height = height;
+	div.appendChild(cnv2d);
+	cnv2d.width = width;
+	cnv2d.height = height;
 	const gl = cnv.getContext('webgl');
+	const ctx = cnv2d.getContext('2d');
+	const planes = ['xy', 'xz', 'yz'];
+	ctx.font = 'bold ' + (~~(width / 40)) + 'px sans-serif';
+	for(let i = 0; i < 3; i++) {
+		let charX = width / 3 / 20 + width / 3 * i;
+		for(let j = 0; j < planes[i].length; j++) {
+			let ch = planes[i].charAt(j);
+			if(ch == 'x') ctx.fillStyle = '#e00';
+			else if(ch == 'y') ctx.fillStyle = '#0c0';
+			else if(ch == 'z') ctx.fillStyle = '#00f';
+			else if(ch == 'w') ctx.fillStyle = '#ff0';
+			else ctx.fillStyle = '#000';
+			ctx.fillText(ch, charX, height / 10);
+			charX += ctx.measureText(ch).width;
+		}
+	}
 	let programs = [];
 	let buffers;
 	let time = 0;
 	let currentTime = Date.now();
 	gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 	buffers = makeBuffers(gl);
-	programs.push(makeProgram('xy', 1, orthogonal, mode, gl));
-	programs.push(makeProgram('xz', 2, orthogonal, mode, gl));
-	programs.push(makeProgram('yz', 3, orthogonal, mode, gl));
+	programs.push(makeProgram(planes[0], 1, orthogonal, mode, gl));
+	programs.push(makeProgram(planes[1], 2, orthogonal, mode, gl));
+	programs.push(makeProgram(planes[2], 3, orthogonal, mode, gl));
 	let view = {programs, buffers, time, currentTime, gl, active: true};
 	window.requestAnimationFrame(() => update(view));
 	return view;
@@ -106,5 +134,6 @@ function update(view) {
 		}
 		view.gl.deleteBuffer(view.buffers.position);
 		view.gl.deleteBuffer(view.buffers.texcoord);
+		view.gl.canvas.remove();
 	}
 }

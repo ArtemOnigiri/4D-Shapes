@@ -45,8 +45,12 @@ function makeShader(plane, orthogonal, mode) {
 	vec4 col3d = draw3D(uv);
 	vec3 col = mix(col2d, col3d.rgb, col3d.a * 0.5);`;
 	let modeCode;
+	let col3d = '0.25, 0.5, 1.0';
 	if(mode == 1) modeCode = mode3d;
-	else if(mode == 2) modeCode = mode2and3d;
+	else if(mode == 2) {
+		modeCode = mode2and3d;
+		col3d = '0.4, 0.5, 0.6';
+	}
 	else modeCode = mode2d;
 	return `
 	precision highp float;
@@ -88,7 +92,7 @@ function makeShader(plane, orthogonal, mode) {
 				vec3 n = getNormal(p);
 				float diff = max(0.0, dot(light, n)) * 0.5 + 0.5;
 				float spec = max(0.0, dot(light, reflect(rd, n)));
-				vec3 col = vec3(0.25, 0.5, 1.0) * diff + pow(spec, 32.0) * 0.5;
+				vec3 col = vec3(` + col3d + `) * diff + pow(spec, 32.0) * 0.5;
 				col = clamp(col, vec3(0.0), vec3(1.0));
 				return vec4(col, 1.0);
 			}
