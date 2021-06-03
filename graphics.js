@@ -1,8 +1,12 @@
-let a = makeView();
+makeView(false, 0);
+makeView(false, 1);
+makeView(false, 2);
 
-function makeView() {
-	const cnv = document.getElementById('cnv');
-	cnv.width = window.innerWidth;
+function makeView(orthogonal, mode) {
+	const cnv = document.createElement('canvas');
+	cnv.classList.add('graphics-view');
+	document.body.appendChild(cnv);
+	cnv.width = Math.min(window.innerWidth, window.innerHeight);
 	cnv.height = cnv.width / 3;
 	const gl = cnv.getContext('webgl');
 	let programs = [];
@@ -11,9 +15,9 @@ function makeView() {
 	let currentTime = Date.now();
 	gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 	buffers = makeBuffers(gl);
-	programs.push(makeProgram('xy', 1, gl));
-	programs.push(makeProgram('xz', 2, gl));
-	programs.push(makeProgram('yz', 3, gl));
+	programs.push(makeProgram('xy', 1, orthogonal, mode, gl));
+	programs.push(makeProgram('xz', 2, orthogonal, mode, gl));
+	programs.push(makeProgram('yz', 3, orthogonal, mode, gl));
 	let view = {programs, buffers, time, currentTime, gl, active: true};
 	window.requestAnimationFrame(() => update(view));
 	return view;
@@ -54,12 +58,12 @@ function makeBuffers(gl) {
 	return {position: positionBuffer, texcoord: texcoordBuffer};
 }
 
-function makeProgram(plane, offset, gl) {
+function makeProgram(plane, offset, orthogonal, mode, gl) {
 	const vertexShader = gl.createShader(gl.VERTEX_SHADER);
 	gl.shaderSource(vertexShader, vertexShaderCode);
 	gl.compileShader(vertexShader);
 	const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-	gl.shaderSource(fragmentShader, makeShader3d(plane, false));
+	gl.shaderSource(fragmentShader, makeShader(plane, orthogonal, mode));
 	gl.compileShader(fragmentShader);
 	let log = gl.getShaderInfoLog(fragmentShader);
 	if(log) console.log(log);
