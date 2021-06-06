@@ -26,7 +26,10 @@ const vertexShaderCode = `
 	}
 `;
 
-function makeShader(plane, orthogonal, mode) {
+function makeShader(plane, orthogonal, mode, operations) {
+	let dim = 2;
+	if(mode == 1 || mode == 2 || mode == 3) dim = 3;
+	else if(mode == 4) dim = 4;
 	const topView2d = 'vec3 p = vec3(uv, 0.0);';
 	const orthogonalView2d = `vec3 p = vec3(0.0, 0.0, 0.0);
 	p.` + plane + ` = uv;`;
@@ -56,19 +59,65 @@ function makeShader(plane, orthogonal, mode) {
 	}
 	else if(mode == 4) modeCode = mode4d;
 	else modeCode = mode2d;
-	let distFunc = `p.` + plane + ` *= rot(u_time);
-	float d = torus3(p, vec2(0.4, 0.15));`;
-	if(mode == 4) {
-		distFunc = `vec4 p4 = vec4(p, 0.0);
-		p4.` + plane + ` *= rot(u_time);
-		float d = torus4(p4, vec3(0.4, 0.15, 0.05));`;
+	let distFunc = `vec3 rp = p;
+	rp.` + plane + ` *= rot(u_time);`;
+	let distFunc3 = '';
+	let shape2d;
+	if(operations[0] == 1) {
+		shape2d = (a, r) => 'box(' + a + ', ' + r + ')';
 	}
+	else if(operations[0] == 2) {
+		shape2d = (a, r) => 'length(' + a + ') - ' + r;
+	}
+	if(dim == 2) {
+		let arg = 'rp.xy';
+		distFunc += 'float d = ' + shape2d(arg, 'u_values.x') + ';';
+	}
+	else if(dim == 3 || dim == 4) {
+		if(operations[1] == 2) {
+			let arg = 'revolve(rp.xy, u_values.y, rp.z)';
+			distFunc += 'float d = ' + shape2d(arg, 'u_values.x') + ';';
+		}
+		else {
+			distFunc += 'float d = ' + shape2d('rp.xy', 'u_values.x') + ';';
+			if(operations[1] == 1) {
+				distFunc3 += 'd = extrude(rp.z, d, u_values.y);';
+			}
+		}
+		if(dim == 3) distFunc += distFunc3;
+	}
+	if(dim == 4) {
+		distFunc = `vec4 rp = vec4(p, 0.0);
+		rp.` + plane + ` *= rot(u_time);`;
+		if(operations[1] == 2 && operations[2] == 2) {
+			let arg = 'revolve(revolve(rp.xy, u_values.z, rp.z), u_values.y, rp.w)';
+			distFunc += 'float d = ' + shape2d(arg, 'u_values.x') + ';'
+		}
+		else {
+			if(operations[2] == 2) {
+				let arg = 'revolve(rp.xy, u_values.z, rp.w)';
+				distFunc += 'float d = ' + shape2d(arg, 'u_values.x') + ';';
+			}
+			else if(operations[1] == 2) {
+				let arg = 'revolve(rp.xy, u_values.y, rp.z)';
+				distFunc += 'float d = ' + shape2d(arg, 'u_values.x') + ';';
+			}
+			else {
+				distFunc += 'float d = ' + shape2d('rp.xy', 'u_values.x') + ';';
+			}
+			distFunc += distFunc3;
+			if(operations[2] == 1) {
+				distFunc += 'd = extrude(rp.w, d, u_values.z);';
+			}
+		}
+	}
+
+
 	let draw2D = '';
 	if(mode == 0 || mode == 1 || mode == 3) {
 		draw2D = `vec3 draw2D(vec2 uv) {
 		` + view2d + `
-		p.` + plane + ` *= rot(u_time);
-		float dist = torus3(p, vec2(0.4, 0.15));
+		float dist = getDist(p);
 		float k = smoothstep(0.0, 0.005, dist);
 		vec3 col = mix(vec3(0.25, 0.5, 1.0), vec3(0.75), k);
 		return col;
@@ -78,6 +127,7 @@ function makeShader(plane, orthogonal, mode) {
 	precision highp float;
 	uniform float u_time;
 	uniform float u_aspect;
+	uniform vec3 u_values;
 	varying vec2 v_texcoord;
 
 	mat2 rot(float a) {
@@ -86,17 +136,27 @@ function makeShader(plane, orthogonal, mode) {
 		return mat2(c, -s, s, c);
 	}
 
-	float torus3(vec3 p, vec2 r) {
-		float d2 = length(p.xy) - r.x;
-		float d3 = length(vec2(d2, p.z)) - r.y;
-		return d3;
+	float extrude(float p, float d, float h) {
+		vec2 w = vec2(d, abs(p) - h);
+		return min(max(w.x, w.y), 0.0) + length(max(w, 0.0));
 	}
 
-	float torus4(vec4 p, vec3 r) {
-		float d2 = length(p.xy) - r.x;
-		float d3 = length(vec2(d2, p.z)) - r.y;
-		float d4 = length(vec2(d3, p.w)) - r.z;
-		return d4;
+	vec2 revolve(vec2 uv, float r, float h) {
+		return vec2(length(uv) - r, h);
+	}
+
+	float squeeze(float p, float d, float h, float h0) {
+		return length(vec2(d + h0, p)) - h;
+	}
+
+	float box(vec2 p, float b) {
+		vec2 d = abs(p) - b;
+		return length(max(d,0.0)) + min(max(d.x,d.y),0.0);
+	}
+
+	float tiger(vec4 p, vec3 r) {
+		float d = pow(sqrt(p.x*p.x + p.y*p.y) - 0.4, 2.0) + pow(sqrt(p.z*p.z + p.w*p.w) - 0.4, 2.0);
+		return d;
 	}
 
 	float getDist(vec3 p) {

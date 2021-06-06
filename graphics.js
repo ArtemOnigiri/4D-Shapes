@@ -1,14 +1,76 @@
-makeView(false, 0);
-makeView(false, 1);
-makeView(false, 2);
-makeView(false, 3);
-makeView(false, 4);
+let values = [0.05, 0.15, 0.5];
+let operations = [2, 2, 2];
+let views = [makeView(false, 0), makeView(false, 2), makeView(false, 4)];
+
+const range2d = document.getElementById('setting-range-2d');
+const rangeValue2d = document.getElementById('setting-range-value-2d');
+range2d.oninput = () => {
+	values[0] = range2d.value / 200;
+	rangeValue2d.textContent = values[0].toFixed(2);
+};
+const options2d = document.getElementById('options-div-2d').children;
+for(let i = 0; i < options2d.length; i++) {
+	options2d[i].addEventListener('click', () => {
+		for(let j = 0; j < options2d.length; j++) {
+			options2d[j].classList.remove('setting-option-active');
+		}
+		options2d[i].classList.add('setting-option-active');
+		operations[0] = i + 1;
+		updateViews();
+	});
+}
+
+const range3d = document.getElementById('setting-range-3d');
+const rangeValue3d = document.getElementById('setting-range-value-3d');
+range3d.oninput = () => {
+	values[1] = range3d.value / 200;
+	rangeValue3d.textContent = values[1].toFixed(2);
+};
+const options3d = document.getElementById('options-div-3d').children;
+for(let i = 0; i < options3d.length; i++) {
+	options3d[i].addEventListener('click', () => {
+		for(let j = 0; j < options3d.length; j++) {
+			options3d[j].classList.remove('setting-option-active');
+		}
+		options3d[i].classList.add('setting-option-active');
+		operations[1] = i + 1;
+		updateViews();
+	});
+}
+
+const range4d = document.getElementById('setting-range-4d');
+const rangeValue4d = document.getElementById('setting-range-value-4d');
+range4d.oninput = () => {
+	values[2] = range4d.value / 200;
+	rangeValue4d.textContent = values[2].toFixed(2);
+};
+const options4d = document.getElementById('options-div-4d').children;
+for(let i = 0; i < options4d.length; i++) {
+	options4d[i].addEventListener('click', () => {
+		for(let j = 0; j < options4d.length; j++) {
+			options4d[j].classList.remove('setting-option-active');
+		}
+		options4d[i].classList.add('setting-option-active');
+		operations[2] = i + 1;
+		updateViews();
+	});
+}
+
+function updateViews() {
+	for(let i = 0; i < views.length; i++) {
+		views[i].onDelete = () => {
+			views[i] = makeView(false, i * 2);
+		};
+		views[i].active = false;
+	}
+}
 
 function makeView(orthogonal, mode) {
 	let width;
 	let height;
 	let planes;
 	let fontSize;
+	let dim = 2;
 	if(mode == 0) {
 		width = height = Math.min(window.innerWidth, window.innerHeight) / 3;
 		planes = ['xy'];
@@ -19,38 +81,42 @@ function makeView(orthogonal, mode) {
 		height = width / 3;
 		planes = ['xy', 'xz', 'yz'];
 		fontSize = ~~(width / 40);
+		dim = 3;
 	}
 	else {
 		width = Math.min(window.innerWidth, window.innerHeight);
 		height = width / 3 * 2;
 		planes = ['xy', 'xz', 'yz', 'wz', 'wx', 'wy'];
 		fontSize = ~~(width / 40);
+		dim = 4;
 	}
-	const container = document.createElement('div');
-	const graphicsContainer = document.createElement('div');
 	const cnv = document.createElement('canvas');
 	const cnv2d = document.createElement('canvas');
-	container.classList.add('view-container');
-	graphicsContainer.classList.add('graphics-view-container');
-	graphicsContainer.style.width = width + 'px';
-	graphicsContainer.style.height = height + 'px';
+	const viewContainer = document.getElementById('graphics-view-' + dim + 'd');
 	cnv.classList.add('graphics-view');
 	cnv2d.classList.add('graphics-view');
-	document.body.appendChild(container);
-	container.appendChild(graphicsContainer);
-	graphicsContainer.appendChild(cnv);
+	const container = document.createElement('div');
+	viewContainer.style.width = width + 'px';
+	viewContainer.style.height = height + 'px';
+	container.style.width = width + 'px';
+	container.style.height = height + 'px';
+	viewContainer.appendChild(container);
+	container.appendChild(cnv);
 	cnv.width = width;
 	cnv.height = height;
-	graphicsContainer.appendChild(cnv2d);
+	container.appendChild(cnv2d);
 	cnv2d.width = width;
 	cnv2d.height = height;
 	const gl = cnv.getContext('webgl');
 	const ctx = cnv2d.getContext('2d');
 	ctx.font = 'bold ' + fontSize + 'px sans-serif';
 	for(let i = 0; i < planes.length; i++) {
-		let charX = width / 3 / 20 + width / 3 *(i % 3);
+		let charX = width / 3 / 20 + width / 3 * (i % 3);
 		let charY = height / 10;
-		if(mode == 4) {
+		if(mode == 0) {
+			charX = width / 20;
+		}
+		else if(mode == 4) {
 			charY = height / 20;
 			if(i > 2) charY += height / 2;
 		}
@@ -129,18 +195,21 @@ function makeProgram(plane, offset, orthogonal, mode, gl) {
 	gl.shaderSource(vertexShader, vertexShaderCode);
 	gl.compileShader(vertexShader);
 	const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-	const fragmentShaderCode = makeShader(plane, orthogonal, mode);
+	const fragmentShaderCode = makeShader(plane, orthogonal, mode, operations);
 	gl.shaderSource(fragmentShader, fragmentShaderCode);
 	gl.compileShader(fragmentShader);
 	let log = gl.getShaderInfoLog(fragmentShader);
-	if(log) console.log(log);
+	if(log) {
+		console.log(fragmentShaderCode);
+		console.log(log);
+	}
 	const program = gl.createProgram();
 	gl.attachShader(program, vertexShader);
 	gl.attachShader(program, fragmentShader);
 	gl.linkProgram(program);
 	gl.deleteShader(vertexShader);
 	gl.deleteShader(fragmentShader);
-	const texcoordLocation = gl.getAttribLocation(program, "a_texcoord");
+	const texcoordLocation = gl.getAttribLocation(program, 'a_texcoord');
 	gl.enableVertexAttribArray(texcoordLocation);
 	const positionLocation = gl.getAttribLocation(program, 'a_position');
 	gl.enableVertexAttribArray(positionLocation);
@@ -149,7 +218,9 @@ function makeProgram(plane, offset, orthogonal, mode, gl) {
 	const aspect = 1;
 	gl.uniform1f(aspectLocation, aspect);
 	const timeLocation = gl.getUniformLocation(program, 'u_time');
-	return {program: program, position: positionLocation, texcoord: texcoordLocation, time: timeLocation, offset: offset};
+	const valuesLocation = gl.getUniformLocation(program, 'u_values');
+	const locations = {position: positionLocation, texcoord: texcoordLocation, time: timeLocation, values: valuesLocation};
+	return {program: program, locations, offset: offset};
 }
 
 function update(view) {
@@ -158,12 +229,14 @@ function update(view) {
 	view.time += deltaTime;
 	view.currentTime = currentTimeNew;
 	for(let i = 0; i < view.programs.length; i++) {
+		const locations = view.programs[i].locations;
 		view.gl.useProgram(view.programs[i].program);
 		view.gl.bindBuffer(view.gl.ARRAY_BUFFER, view.buffers.position);
-		view.gl.vertexAttribPointer(view.programs[i].position, 2, view.gl.FLOAT, false, 0, view.programs[i].offset * 4 * 12);
+		view.gl.vertexAttribPointer(locations.position, 2, view.gl.FLOAT, false, 0, view.programs[i].offset * 4 * 12);
 		view.gl.bindBuffer(view.gl.ARRAY_BUFFER, view.buffers.texcoord);
-		view.gl.vertexAttribPointer(view.programs[i].texcoord, 2, view.gl.FLOAT, false, 0, 0);
-		view.gl.uniform1f(view.programs[i].time, view.time * 0.001);
+		view.gl.vertexAttribPointer(locations.texcoord, 2, view.gl.FLOAT, false, 0, 0);
+		view.gl.uniform1f(locations.time, view.time * 0.001);
+		view.gl.uniform3fv(locations.values, values);
 		view.gl.drawArrays(view.gl.TRIANGLES, 0, 6);
 	}
 	if(view.active) window.requestAnimationFrame(() => update(view));
@@ -174,5 +247,6 @@ function update(view) {
 		view.gl.deleteBuffer(view.buffers.position);
 		view.gl.deleteBuffer(view.buffers.texcoord);
 		view.container.remove();
+		if(view.onDelete) view.onDelete();
 	}
 }
