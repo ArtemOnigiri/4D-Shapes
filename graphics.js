@@ -73,10 +73,7 @@ function updateViews() {
 	for(let i = 0; i < views.length; i++) {
 		let v = i * 2;
 		if(i == 1) v = view3d;
-		views[i].onDelete = () => {
-			views[i] = makeView(false, v);
-		};
-		views[i].active = false;
+		updatePrograms(views[i], false, v);
 	}
 }
 
@@ -165,9 +162,39 @@ function makeView(orthogonal, mode) {
 			programs.push(makeProgram(planes[i], i + 4, orthogonal, mode, gl));
 		}
 	}
-	let view = {programs, buffers, time, currentTime, gl, container, active: true};
+	let view = {programs, buffers, time, currentTime, gl, container};
 	window.requestAnimationFrame(() => update(view));
 	return view;
+}
+
+function updatePrograms(view, orthogonal, mode) {
+	let planes;
+	if(mode == 0) {
+		planes = ['xy'];
+	}
+	else if(mode < 4) {
+		planes = ['xy', 'xz', 'yz'];
+	}
+	else {
+		planes = ['xy', 'xz', 'yz', 'wz', 'wx', 'wy'];
+	}
+	for(let i = 0; i < view.programs.length; i++) {
+		view.gl.deleteProgram(view.programs[i].program);
+	}
+	view.programs = [];
+	if(mode == 0) {
+		view.programs.push(makeProgram(planes[0], 0, orthogonal, mode, view.gl));
+	}
+	else if(mode < 4) {
+		for(let i = 0; i < 3; i++) {
+			view.programs.push(makeProgram(planes[i], i + 1, orthogonal, mode, view.gl));
+		}
+	}
+	else {
+		for(let i = 0; i < 6; i++) {
+			view.programs.push(makeProgram(planes[i], i + 4, orthogonal, mode, view.gl));
+		}
+	}
 }
 
 function makeBuffers(gl) {
@@ -254,14 +281,5 @@ function update(view) {
 		view.gl.uniform3fv(locations.values, values);
 		view.gl.drawArrays(view.gl.TRIANGLES, 0, 6);
 	}
-	if(view.active) window.requestAnimationFrame(() => update(view));
-	else {
-		for(let i = 0; i < view.programs.length; i++) {
-			view.gl.deleteProgram(view.programs[i].program);
-		}
-		view.gl.deleteBuffer(view.buffers.position);
-		view.gl.deleteBuffer(view.buffers.texcoord);
-		view.container.remove();
-		if(view.onDelete) view.onDelete();
-	}
+	window.requestAnimationFrame(() => update(view));
 }
