@@ -19,7 +19,7 @@
         }
         .settings-container {
             display: block;
-            width: 30%;
+            width: 40%;
             margin: 0 auto;
             margin-top: 3vw;
             margin-bottom: 2vw;
@@ -71,6 +71,7 @@
             box-shadow: 0px 0px 5px rgba(80, 150, 255, 1.0);
             border-radius: 16px;
             overflow: hidden;
+            margin-right: 1vw;
         }
     </style>
 </head>
@@ -79,13 +80,15 @@
         <h1 class="view-header">2D</h1>
         <div class="settings-container">
             <div class="settings-div">
-                <p class="setting-label">Offset: <span class="setting-value" id="setting-range-value-2d">0.05</span></p>
+                <p class="setting-label">Size: <span class="setting-value" id="setting-range-value-2d">0.05</span></p>
                 <input type="range" class="setting-range" value="10" id="setting-range-2d">
             </div>
             <div class="settings-div">
-                <div class="options-div" id="options-div-2d">
+                <div class="options-div" id="options-operation-2d">
                     <div class="setting-option">Square</div>
                     <div class="setting-option setting-option-active">Circle</div>
+                    <div class="setting-option">Triangle</div>
+                    <div class="setting-option">Hexagon</div>
                 </div>
             </div>
         </div>
@@ -101,9 +104,17 @@
                 <input type="range" class="setting-range" value="30" id="setting-range-3d">
             </div>
             <div class="settings-div">
-                <div class="options-div" id="options-div-3d">
+                <div class="options-div" id="options-operation-3d">
                     <div class="setting-option">Extrude</div>
                     <div class="setting-option setting-option-active">Revolve</div>
+                    <div class="setting-option">Squeeze</div>
+                </div>
+            </div>
+            <div class="settings-div">
+                <div class="options-div" id="options-view-3d">
+                    <div class="setting-option">2D</div>
+                    <div class="setting-option setting-option-active">3D</div>
+                    <div class="setting-option">2D & 3D</div>
                 </div>
             </div>
         </div>
@@ -119,9 +130,10 @@
                 <input type="range" class="setting-range" value="100" id="setting-range-4d">
             </div>
             <div class="settings-div">
-                <div class="options-div" id="options-div-4d">
+                <div class="options-div" id="options-operation-4d">
                     <div class="setting-option">Extrude</div>
                     <div class="setting-option setting-option-active">Revolve</div>
+                    <div class="setting-option">Squeeze</div>
                 </div>
             </div>
         </div>

@@ -1,6 +1,7 @@
 let values = [0.05, 0.15, 0.5];
 let operations = [2, 2, 2];
-let views = [makeView(false, 0), makeView(false, 2), makeView(false, 4)];
+let view3d = 2;
+let views = [makeView(false, 0), makeView(false, view3d), makeView(false, 4)];
 
 const range2d = document.getElementById('setting-range-2d');
 const rangeValue2d = document.getElementById('setting-range-value-2d');
@@ -8,7 +9,7 @@ range2d.oninput = () => {
 	values[0] = range2d.value / 200;
 	rangeValue2d.textContent = values[0].toFixed(2);
 };
-const options2d = document.getElementById('options-div-2d').children;
+const options2d = document.getElementById('options-operation-2d').children;
 for(let i = 0; i < options2d.length; i++) {
 	options2d[i].addEventListener('click', () => {
 		for(let j = 0; j < options2d.length; j++) {
@@ -26,7 +27,7 @@ range3d.oninput = () => {
 	values[1] = range3d.value / 200;
 	rangeValue3d.textContent = values[1].toFixed(2);
 };
-const options3d = document.getElementById('options-div-3d').children;
+const options3d = document.getElementById('options-operation-3d').children;
 for(let i = 0; i < options3d.length; i++) {
 	options3d[i].addEventListener('click', () => {
 		for(let j = 0; j < options3d.length; j++) {
@@ -44,7 +45,7 @@ range4d.oninput = () => {
 	values[2] = range4d.value / 200;
 	rangeValue4d.textContent = values[2].toFixed(2);
 };
-const options4d = document.getElementById('options-div-4d').children;
+const options4d = document.getElementById('options-operation-4d').children;
 for(let i = 0; i < options4d.length; i++) {
 	options4d[i].addEventListener('click', () => {
 		for(let j = 0; j < options4d.length; j++) {
@@ -56,10 +57,24 @@ for(let i = 0; i < options4d.length; i++) {
 	});
 }
 
+const optionsView3d = document.getElementById('options-view-3d').children;
+for(let i = 0; i < optionsView3d.length; i++) {
+	optionsView3d[i].addEventListener('click', () => {
+		for(let j = 0; j < optionsView3d.length; j++) {
+			optionsView3d[j].classList.remove('setting-option-active');
+		}
+		optionsView3d[i].classList.add('setting-option-active');
+		view3d = i + 1;
+		updateViews();
+	});
+}
+
 function updateViews() {
 	for(let i = 0; i < views.length; i++) {
+		let v = i * 2;
+		if(i == 1) v = view3d;
 		views[i].onDelete = () => {
-			views[i] = makeView(false, i * 2);
+			views[i] = makeView(false, v);
 		};
 		views[i].active = false;
 	}

@@ -69,6 +69,12 @@ function makeShader(plane, orthogonal, mode, operations) {
 	else if(operations[0] == 2) {
 		shape2d = (a, r) => 'length(' + a + ') - ' + r;
 	}
+	else if(operations[0] == 3) {
+		shape2d = (a, r) => 'triangle(' + a + ', ' + r + ')';
+	}
+	else if(operations[0] == 4) {
+		shape2d = (a, r) => 'hexagon(' + a + ', ' + r + ')';
+	}
 	if(dim == 2) {
 		let arg = 'rp.xy';
 		distFunc += 'float d = ' + shape2d(arg, 'u_values.x') + ';';
@@ -82,6 +88,9 @@ function makeShader(plane, orthogonal, mode, operations) {
 			distFunc += 'float d = ' + shape2d('rp.xy', 'u_values.x') + ';';
 			if(operations[1] == 1) {
 				distFunc3 += 'd = extrude(rp.z, d, u_values.y);';
+			}
+			else if(operations[1] == 3) {
+				distFunc3 += 'd = squeeze(rp.z, d, u_values.y, u_values.x);';
 			}
 		}
 		if(dim == 3) distFunc += distFunc3;
@@ -108,6 +117,9 @@ function makeShader(plane, orthogonal, mode, operations) {
 			distFunc += distFunc3;
 			if(operations[2] == 1) {
 				distFunc += 'd = extrude(rp.w, d, u_values.z);';
+			}
+			if(operations[2] == 3) {
+				distFunc += 'd = squeeze(rp.w, d, u_values.z, u_values.y);';
 			}
 		}
 	}
@@ -152,6 +164,23 @@ function makeShader(plane, orthogonal, mode, operations) {
 	float box(vec2 p, float b) {
 		vec2 d = abs(p) - b;
 		return length(max(d,0.0)) + min(max(d.x,d.y),0.0);
+	}
+
+	float hexagon(vec2 p, float r) {
+		const vec3 k = vec3(-0.866025404,0.5,0.577350269);
+		p = abs(p);
+		p -= 2.0*min(dot(k.xy,p),0.0)*k.xy;
+		p -= vec2(clamp(p.x, -k.z*r, k.z*r), r);
+		return length(p) * sign(p.y);
+	}
+
+	float triangle(vec2 p, float r) {
+		const float k = sqrt(3.0);
+		p.x = abs(p.x) - r;
+		p.y = p.y + r/k;
+		if( p.x+k*p.y>0.0 ) p=vec2(p.x-k*p.y,-k*p.x-p.y)/2.0;
+		p.x -= clamp( p.x, -2.0*r, 0.0 );
+		return -length(p)*sign(p.y);
 	}
 
 	float tiger(vec4 p, vec3 r) {
