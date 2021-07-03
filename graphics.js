@@ -1,5 +1,6 @@
 let values = [0.05, 0.15, 0.5];
 let operations = [2, 2, 2];
+let viewMovement = 0;
 let view3d = 2;
 let views = [makeView(false, 0), makeView(false, view3d), makeView(false, 4)];
 
@@ -18,6 +19,7 @@ for(let i = 0; i < options2d.length; i++) {
 		options2d[i].classList.add('setting-option-active');
 		operations[0] = i + 1;
 		updateViews();
+		updateOptions();
 	});
 }
 
@@ -36,6 +38,7 @@ for(let i = 0; i < options3d.length; i++) {
 		options3d[i].classList.add('setting-option-active');
 		operations[1] = i + 1;
 		updateViews();
+		updateOptions();
 	});
 }
 
@@ -54,6 +57,7 @@ for(let i = 0; i < options4d.length; i++) {
 		options4d[i].classList.add('setting-option-active');
 		operations[2] = i + 1;
 		updateViews();
+		updateOptions();
 	});
 }
 
@@ -67,6 +71,40 @@ for(let i = 0; i < optionsView3d.length; i++) {
 		view3d = i + 1;
 		updateViews();
 	});
+}
+
+const optionsMovement = document.getElementById('options-movement').children;
+for(let i = 0; i < optionsMovement.length; i++) {
+	optionsMovement[i].addEventListener('click', () => {
+		for(let j = 0; j < optionsMovement.length; j++) {
+			optionsMovement[j].classList.remove('setting-option-active');
+		}
+		optionsMovement[i].classList.add('setting-option-active');
+		viewMovement = i;
+		updateViews();
+	});
+}
+
+start();
+
+function start() {
+	range2d.value = values[0] * 200;
+	rangeValue2d.textContent = values[0].toFixed(2);
+	range3d.value = values[1] * 200;
+	rangeValue3d.textContent = values[1].toFixed(2);
+	range4d.value = values[2] * 200;
+	rangeValue4d.textContent = values[2].toFixed(2);
+}
+
+function updateOptions() {
+	let hash = '';
+	for(let i = 0; i < 3; i++) {
+		hash += operations[i];
+	}
+	for(let i = 0; i < 3; i++) {
+		hash += '-' + (~~(values[i] * 200));
+	}
+	// location.hash = hash;
 }
 
 function updateViews() {
@@ -150,16 +188,16 @@ function makeView(orthogonal, mode) {
 	gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 	buffers = makeBuffers(gl);
 	if(mode == 0) {
-		programs.push(makeProgram(planes[0], 0, orthogonal, mode, gl));
+		programs.push(makeProgram(planes[0], 0, orthogonal, mode,  gl));
 	}
 	else if(mode < 4) {
 		for(let i = 0; i < 3; i++) {
-			programs.push(makeProgram(planes[i], i + 1, orthogonal, mode, gl));
+			programs.push(makeProgram(planes[i], i + 1, orthogonal,  mode, gl));
 		}
 	}
 	else {
 		for(let i = 0; i < 6; i++) {
-			programs.push(makeProgram(planes[i], i + 4, orthogonal, mode, gl));
+			programs.push(makeProgram(planes[i], i + 4, orthogonal,  mode, gl));
 		}
 	}
 	let view = {programs, buffers, time, currentTime, gl, container};
@@ -237,7 +275,7 @@ function makeProgram(plane, offset, orthogonal, mode, gl) {
 	gl.shaderSource(vertexShader, vertexShaderCode);
 	gl.compileShader(vertexShader);
 	const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-	const fragmentShaderCode = makeShader(plane, orthogonal, mode, operations);
+	const fragmentShaderCode = makeShader(plane, orthogonal, mode, viewMovement, operations);
 	gl.shaderSource(fragmentShader, fragmentShaderCode);
 	gl.compileShader(fragmentShader);
 	let log = gl.getShaderInfoLog(fragmentShader);

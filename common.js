@@ -26,7 +26,7 @@ const vertexShaderCode = `
 	}
 `;
 
-function makeShader(plane, orthogonal, mode, operations) {
+function makeShader(plane, orthogonal, mode, viewMovement, operations) {
 	let dim = 2;
 	if(mode == 1 || mode == 2 || mode == 3) dim = 3;
 	else if(mode == 4) dim = 4;
@@ -59,8 +59,15 @@ function makeShader(plane, orthogonal, mode, operations) {
 	}
 	else if(mode == 4) modeCode = mode4d;
 	else modeCode = mode2d;
-	let distFunc = `vec3 rp = p;
-	rp.` + plane + ` *= rot(u_time);`;
+	let distFunc = `vec3 rp = p;`
+	if(viewMovement == 0) distFunc += `rp.` + plane + ` *= rot(u_time);`;
+	else {
+		let axis = 'y';
+		if(dim == 3) axis = 'z';
+		else if(dim == 4) axis = 'w';
+		distFunc += `rp.` + axis + ` += sin(u_time) * 0.5;`;
+		distFunc += `rp.` + plane + ` *= rot(1.5707963);`;
+	}
 	let distFunc3 = '';
 	let shape2d;
 	if(operations[0] == 1) {
@@ -76,7 +83,7 @@ function makeShader(plane, orthogonal, mode, operations) {
 		shape2d = (a, r) => 'hexagon(' + a + ', ' + r + ')';
 	}
 	if(dim == 2) {
-		let arg = 'rp.xy';
+		let arg = 'p.xy';
 		distFunc += 'float d = ' + shape2d(arg, 'u_values.x') + ';';
 	}
 	else if(dim == 3 || dim == 4) {
@@ -90,14 +97,22 @@ function makeShader(plane, orthogonal, mode, operations) {
 				distFunc3 += 'd = extrude(rp.z, d, u_values.y);';
 			}
 			else if(operations[1] == 3) {
-				distFunc3 += 'd = squeeze(rp.z, d, u_values.y, u_values.x);';
+				distFunc3 += 'd = pinch(rp.z, d, u_values.y);';
 			}
 		}
 		if(dim == 3) distFunc += distFunc3;
 	}
 	if(dim == 4) {
-		distFunc = `vec4 rp = vec4(p, 0.0);
-		rp.` + plane + ` *= rot(u_time);`;
+		distFunc = `vec4 rp = vec4(p, 0.0);`;
+		if(viewMovement == 0) {
+			distFunc += `rp.` + plane + ` *= rot(u_time);`;
+			distFunc += `rp.yz *= rot(1.5707963 * 0.5);`;
+			distFunc += `rp.xz *= rot(1.5707963 * 0.5);`;
+		}
+		else {
+			distFunc += `rp.w += sin(u_time) * 0.5;`;
+			distFunc += `rp.` + plane + ` *= rot(1.5707963);`;
+		}
 		if(operations[1] == 2 && operations[2] == 2) {
 			let arg = 'revolve(revolve(rp.xy, u_values.z, rp.z), u_values.y, rp.w)';
 			distFunc += 'float d = ' + shape2d(arg, 'u_values.x') + ';'
@@ -119,7 +134,7 @@ function makeShader(plane, orthogonal, mode, operations) {
 				distFunc += 'd = extrude(rp.w, d, u_values.z);';
 			}
 			if(operations[2] == 3) {
-				distFunc += 'd = squeeze(rp.w, d, u_values.z, u_values.y);';
+				distFunc += 'd = pinch(rp.w, d, u_values.z);';
 			}
 		}
 	}
@@ -161,6 +176,11 @@ function makeShader(plane, orthogonal, mode, operations) {
 		return length(vec2(d + h0, p)) - h;
 	}
 
+	float pinch(float p, float d, float h) {
+		d += abs(p / (h * 5.0 + 0.5));
+		return max(-p, d);
+	}
+
 	float box(vec2 p, float b) {
 		vec2 d = abs(p) - b;
 		return length(max(d,0.0)) + min(max(d.x,d.y),0.0);
@@ -190,7 +210,7 @@ function makeShader(plane, orthogonal, mode, operations) {
 
 	float getDist(vec3 p) {
 		` + distFunc + `
-		return d;
+		return d ` + (operations[1] == 3 || operations[2] == 3 ? `* 0.25` : ``) + `;
 	}
 
 	vec3 getNormal(vec3 p) {
